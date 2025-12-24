@@ -7,7 +7,7 @@ const socketIo = require('socket.io');
 
 dotenv.config();
 
-const {closePool} = require("./Services/pool.js");
+const { closePool } = require("./Services/pool.js");
 
 const app = express();
 
@@ -54,7 +54,7 @@ const authorization = require("./Middlewares/authorization.js");
 const {
   validateMedication,
   validateMedicalCondition,
-} = require("./Middlewares/medicalInformationValidation.js"); 
+} = require("./Middlewares/medicalInformationValidation.js");
 
 const {
   validateTransaction,
@@ -211,7 +211,7 @@ io.on('connection', (socket) => {
   if (!Object.keys(userSocketMap).includes(socket.id)) {
     socket.emit('requestRegistration');
   }
-  
+
   socket.on('register', (accountId) => {
     userSocketMap[accountId] = socket.id;
     console.log(`User ${accountId} registered with socket ID ${socket.id}`);

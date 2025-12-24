@@ -13,7 +13,7 @@ async function authenticateAccount(req, res) {
     }
 
     const account = await accountModel.getAccountByPhone(phone_number);
-        if (!account) {
+    if (!account) {
       return res.status(404).json({ error: "Account not found." });
     }
     const user = await accountModel.getAccountById(account.id);
@@ -22,8 +22,8 @@ async function authenticateAccount(req, res) {
 
     if (isMatch) {
       const payload = {
-      id: account.id,
-      role: user.account_type,
+        id: account.id,
+        role: user.account_type,
       };
       console.log(user.account_type);
       const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "3600s" });
@@ -119,7 +119,7 @@ async function initializeAccountDetails(req, res) {
     const accountId = parseInt(req.params.id);
 
     if (isNaN(accountId)) {
-      return res.status(403).json({ error: "Unauthorized to edit this profile."});
+      return res.status(403).json({ error: "Unauthorized to edit this profile." });
     }
 
     const accountDetails = req.body;

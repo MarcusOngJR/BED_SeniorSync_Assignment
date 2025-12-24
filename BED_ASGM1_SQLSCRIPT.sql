@@ -1,7 +1,9 @@
--- Create AccountPassword table\
-drop database BED_ASGM1;
-create database BED_ASGM1
 
+CREATE DATABASE BED_ASGM1;
+GO
+
+USE BED_ASGM1;
+GO
 
 
 CREATE TABLE AccountPassword (

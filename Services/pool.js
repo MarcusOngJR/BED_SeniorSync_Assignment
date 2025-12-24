@@ -4,6 +4,14 @@ const sql = require("mssql");
 // Change this to your actual database configuration
 const dbConfig = require("../dbConfig");
 
+console.log("CONNECTING WITH:", {
+  user: dbConfig.user,
+  password_set: !!dbConfig.password,
+  server: dbConfig.server,
+  port: dbConfig.port,
+  database: dbConfig.database,
+});
+
 let pool;
 
 /**
