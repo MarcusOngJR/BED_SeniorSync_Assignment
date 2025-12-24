@@ -12,6 +12,7 @@ const { closePool } = require("./Services/pool.js");
 const app = express();
 
 
+app.use(express.static(path.join(__dirname, "public")));
 
 const server = http.createServer(app); // create HTTP server manually
 const io = socketIo(server);
@@ -72,6 +73,7 @@ const {
 
 app.get("/health", (req, res) => {
   res.status(200).json({ ok: true, time: new Date().toISOString() });
+  console.log("!!!!!!!!!!  Health check OK  !!!!!!!!!!");
 });
 
 //Account Profile Endpoints (By XinHui)
