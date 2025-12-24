@@ -1,24 +1,18 @@
-const sql = require("mssql");
-const dbConfig = require("../dbConfig");
 const { getPool } = require('../Services/pool');
-
 
 async function getSyncedAccounts(userId) {
   try {
     const pool = await getPool();
-    const request = pool.request();
-    request.input("userId", sql.Int, userId);
-
-    const result = await request.query(`
+    const result = await pool.query(`
       SELECT ap.*
       FROM syncAccounts sa
       JOIN AccountProfile ap
         ON (ap.id = sa.elderly_id OR ap.id = sa.caretaker_id)
-      WHERE (sa.elderly_id = @userId OR sa.caretaker_id = @userId)
-        AND ap.id != @userId
-    `);
+      WHERE (sa.elderly_id = $1 OR sa.caretaker_id = $1)
+        AND ap.id != $1
+    `, [userId]);
 
-    return result.recordset;
+    return result.rows;
   } catch (error) {
     console.error("Error fetching synced accounts from database:", error);
     throw new Error("Database query failed");
@@ -26,56 +20,45 @@ async function getSyncedAccounts(userId) {
 }
 
 async function checkSyncCodeExists(syncCode) {
-    const pool = await getPool();
-    const request = pool.request();
-    request.input("syncCode", sql.VarChar(6), syncCode.toString());
-    const result = await request.query(`
+  const pool = await getPool();
+  const result = await pool.query(`
         SELECT COUNT(*) AS count
         FROM syncCodes
-        WHERE code = @syncCode
-    `);
-    return result.recordset[0].count > 0;
+        WHERE code = $1
+    `, [syncCode.toString()]);
+  return parseInt(result.rows[0].count) > 0;
 }
 
 async function createSyncRequest(accountId, syncCode) {
-    const pool = await getPool();
-    const request = pool.request();
+  const pool = await getPool();
 
-    request.input("code", sql.VarChar(6), syncCode.toString()); // ✅ convert to string
-    request.input("acc_id", sql.Int, accountId);
-
-    await request.query(`
+  await pool.query(`
         INSERT INTO syncCodes (code, acc_id)
-        VALUES (@code, @acc_id)
-    `);
+        VALUES ($1, $2)
+    `, [syncCode.toString(), accountId]);
 }
 
 async function checkSyncCodeValid(syncCode) {
   const pool = await getPool();
-  const request = pool.request();
-  request.input("syncCode", sql.VarChar(6), syncCode.toString());
-  const result = await request.query(`
+  const result = await pool.query(`
     SELECT acc_id
     FROM syncCodes
-    WHERE code = @syncCode
-  `);
+    WHERE code = $1
+  `, [syncCode.toString()]);
 
-  return result.recordset[0] || null; // return the record (with acc_id), or null
+  return result.rows[0] || null; // return the record (with acc_id), or null
 }
 
 async function linkAccounts(elderly_id, caretaker_id) {
   try {
     const pool = await getPool();
-    const request = pool.request();
-    request.input("elderly_id", sql.Int, elderly_id);
-    request.input("caretaker_id", sql.Int, caretaker_id);
 
-    const result = await request.query(`
+    const result = await pool.query(`
       INSERT INTO syncAccounts (elderly_id, caretaker_id)
-      VALUES (@elderly_id, @caretaker_id)
-    `);
+      VALUES ($1, $2)
+    `, [elderly_id, caretaker_id]);
 
-    return result.rowsAffected[0] > 0; // returns true if insert succeeded
+    return result.rowCount > 0; // returns true if insert succeeded
   } catch (error) {
     console.error("Error linking accounts in database:", error);
     throw new Error("Database query failed");
@@ -83,20 +66,18 @@ async function linkAccounts(elderly_id, caretaker_id) {
 }
 async function deleteSyncCode(syncCode) {
 
-    const pool = await getPool();
-    const request = pool.request();
-    request.input("syncCode", sql.VarChar(6), syncCode.toString());
-    await request.query(`
+  const pool = await getPool();
+  await pool.query(`
         DELETE FROM syncCodes
-        WHERE code = @syncCode
-    `);
+        WHERE code = $1
+    `, [syncCode.toString()]);
 }
 
 module.exports = {
-    getSyncedAccounts,
-    checkSyncCodeExists,
-    createSyncRequest,
-    linkAccounts,
-    checkSyncCodeValid,
-    deleteSyncCode
+  getSyncedAccounts,
+  checkSyncCodeExists,
+  createSyncRequest,
+  linkAccounts,
+  checkSyncCodeValid,
+  deleteSyncCode
 };

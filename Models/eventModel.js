@@ -1,14 +1,9 @@
-const sql = require("mssql");
-const dbConfig = require("../dbConfig");
 const { getPool } = require('../Services/pool');
 
 async function getEventRegisteredByID(id) {
-    let connection;
     try {
-        connection = await getPool();
-        const result = await connection.request()
-            .input("account_id", sql.Int, id)  // Use 'id' here
-            .query(`
+        const pool = await getPool();
+        const result = await pool.query(`
                 SELECT 
                     e.banner_image,
                     e.id,
@@ -22,31 +17,27 @@ async function getEventRegisteredByID(id) {
                     e.equipment_required
                 FROM RegisteredList r
                 JOIN EventList e ON r.event_id = e.id
-                WHERE r.account_id = @account_id and e.date >= CONVERT(DATE, GETDATE())
+                WHERE r.account_id = $1 AND e.date >= CURRENT_DATE
                 ORDER BY e.date ASC
-            `);
+            `, [id]);
 
-        return result.recordset;
+        return result.rows;
 
     } catch (error) {
         console.error("Model error:", error);
         throw error;
-    } 
+    }
 }
 
 async function getEventDetailsByID(id) {
-    let connection;
-
     try {
-        connection = await getPool();
-        const request = connection.request();
-        request.input("id", sql.Int, id);
-
-        const result = await request.query(
-            "SELECT * FROM EventList WHERE id = @id"
+        const pool = await getPool();
+        const result = await pool.query(
+            "SELECT * FROM EventList WHERE id = $1",
+            [id]
         );
 
-        return result.recordset[0]; // Return first match or undefined
+        return result.rows[0]; // Return first match or undefined
     } catch (error) {
         console.error("Model error:", error);
         throw error;
@@ -54,14 +45,10 @@ async function getEventDetailsByID(id) {
 }
 
 async function getAllEvents() {
-    let connection;
-
     try {
-        connection = await getPool();
-        const request = connection.request();
-
-        const result = await request.query("SELECT * FROM EventList where date >= CONVERT(DATE, GETDATE()) ORDER BY date asc");
-        return result.recordset; // Return all events
+        const pool = await getPool();
+        const result = await pool.query("SELECT * FROM EventList where date >= CURRENT_DATE ORDER BY date asc");
+        return result.rows; // Return all events
     } catch (error) {
         console.error("Model error:", error);
         throw error;
@@ -69,27 +56,24 @@ async function getAllEvents() {
 }
 
 async function registerEvent(accountId, eventId) {
-    let connection;
     try {
-        connection = await getPool();
-        const request = await connection.request();
-        request.input("accountId", sql.Int, accountId);
-        request.input("eventId", sql.Int, eventId);
+        const pool = await getPool();
 
-        const existing = await request.query(`
+        const existing = await pool.query(`
             SELECT 1 FROM RegisteredList
-            WHERE account_id = @accountId AND event_id = @eventId
-        `);
-        if (existing.recordset.length > 0) {
+            WHERE account_id = $1 AND event_id = $2
+        `, [accountId, eventId]);
+
+        if (existing.rows.length > 0) {
             return false;
         }
 
-        const result = await request.query(`
+        const result = await pool.query(`
             INSERT INTO RegisteredList (account_id, event_id)
-            VALUES (@accountId, @eventId);
-        `);
+            VALUES ($1, $2)
+        `, [accountId, eventId]);
 
-        return result.rowsAffected > 0;
+        return result.rowCount > 0;
     } catch (error) {
         console.error("Model error:", error);
         throw error;
@@ -97,19 +81,14 @@ async function registerEvent(accountId, eventId) {
 }
 
 async function unregisterEvent(accountId, eventId) {
-    let connection;
     try {
-        connection = await getPool();
-        const request = connection.request();
-        request.input("accountId", sql.Int, accountId);
-        request.input("eventId", sql.Int, eventId);
-
-        const result = await request.query(`
+        const pool = await getPool();
+        const result = await pool.query(`
             DELETE FROM RegisteredList
-            WHERE account_id = @accountId AND event_id = @eventId;
-        `);
+            WHERE account_id = $1 AND event_id = $2
+        `, [accountId, eventId]);
 
-        return result.rowsAffected > 0;
+        return result.rowCount > 0;
     } catch (error) {
         console.error("Model error:", error);
         throw error;
@@ -117,28 +96,27 @@ async function unregisterEvent(accountId, eventId) {
 }
 
 async function createEvent(eventData) {
-    let connection;
     try {
-        connection = await getPool();
-        const request = connection.request();
-        request.input("name", sql.NVarChar, eventData.name);
-        request.input("description", sql.NVarChar, eventData.description);
-        request.input("date", sql.DateTime, eventData.date);
-        request.input("time", sql.NVarChar, eventData.time);
-        request.input("location", sql.NVarChar, eventData.location);
-        request.input("org_id", sql.Int, parseInt(eventData.org_id));
-        request.input("weekly", sql.Bit, eventData.weekly ? 1 : 0);
-        request.input("equipment_required", sql.NVarChar, eventData.equipment_required || null);
-        request.input("banner_image", sql.NVarChar, eventData.banner_image || "");
+        const pool = await getPool();
 
         console.log(eventData);
 
-        const result = await request.query(`
+        const result = await pool.query(`
             INSERT INTO EventList (name, description, date, time, location, org_id, weekly, equipment_required, banner_image)
-            VALUES (@name, @description, @date, @time, @location, @org_id, @weekly, @equipment_required, @banner_image);
-        `);
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [
+            eventData.name,
+            eventData.description,
+            eventData.date,
+            eventData.time,
+            eventData.location,
+            parseInt(eventData.org_id),
+            eventData.weekly ? 1 : 0,
+            eventData.equipment_required || null,
+            eventData.banner_image || ""
+        ]);
 
-        return result.rowsAffected > 0;
+        return result.rowCount > 0;
     } catch (error) {
         console.error("Model error:", error);
         throw error;
@@ -146,37 +124,36 @@ async function createEvent(eventData) {
 }
 
 async function updateEvent(eventId, eventData, accountId) {
-    let connection;
     try {
-        connection = await getPool();
-        const request = connection.request();
-        request.input("id", sql.Int, eventId);
-        request.input("name", sql.NVarChar, eventData.name);
-        request.input("description", sql.NVarChar, eventData.description);
-        request.input("date", sql.DateTime, new Date(eventData.date)); 
-        request.input("time", sql.NVarChar, eventData.time);
-        request.input("location", sql.NVarChar, eventData.location);
-        request.input("org_id", sql.Int, accountId);
-        request.input("weekly", sql.Bit, eventData.weekly ? 1 : 0);
-        request.input("equipment_required", sql.NVarChar, eventData.equipment_required);
-        request.input("banner_image", sql.NVarChar, eventData.banner_image || "");
+        const pool = await getPool();
 
-        const result = await request.query(`
+        const result = await pool.query(`
             UPDATE EventList
-            SET name = @name,
-                description = @description,
-                date = @date,
-                time = @time,
-                location = @location,
-                weekly = @weekly,
-                equipment_required = @equipment_required,
-                banner_image = @banner_image
-            WHERE id = @id AND org_id = @org_id;
-        `);
+            SET name = $1,
+                description = $2,
+                date = $3,
+                time = $4,
+                location = $5,
+                weekly = $6,
+                equipment_required = $7,
+                banner_image = $8
+            WHERE id = $9 AND org_id = $10
+        `, [
+            eventData.name,
+            eventData.description,
+            new Date(eventData.date),
+            eventData.time,
+            eventData.location,
+            eventData.weekly ? 1 : 0,
+            eventData.equipment_required,
+            eventData.banner_image || "",
+            eventId,
+            accountId
+        ]);
 
-        console.log("Rows affected:", result.rowsAffected);
+        console.log("Rows affected:", result.rowCount);
 
-        return result.rowsAffected > 0;
+        return result.rowCount > 0;
     } catch (error) {
         console.error("Model error:", error);
         throw error;
@@ -184,27 +161,23 @@ async function updateEvent(eventId, eventData, accountId) {
 }
 
 async function deleteEvent(eventId, accountId) {
-    let connection;
     try {
-        connection = await getPool();
-        const request = await connection.request();
-        request.input("id", sql.Int, eventId);
-        request.input("account_id", sql.Int, accountId);
+        const pool = await getPool();
 
         //delete from reference table
-        await request.query(`
+        await pool.query(`
             DELETE FROM RegisteredList
-            WHERE event_id = @id;
-        `);
+            WHERE event_id = $1
+        `, [eventId]);
 
         //delete from event list
-        const result = await request.query(`
+        const result = await pool.query(`
             DELETE FROM EventList
-            WHERE id = @id AND org_id = @account_id;
-        `);
+            WHERE id = $1 AND org_id = $2
+        `, [eventId, accountId]);
 
 
-        return result.rowsAffected[0] > 0;
+        return result.rowCount > 0;
 
     } catch (error) {
         console.error("Model error:", error);
@@ -213,36 +186,33 @@ async function deleteEvent(eventId, accountId) {
 }
 
 async function getAllUpcomingEvents() {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().query(`
+    try {
+        const pool = await getPool();
+        const result = await pool.query(`
       SELECT *
       FROM EventList
       WHERE canceled = 0
     `);
-    return result.recordset;
-  } catch (err) {
-    console.error("Error fetching events:", err);
-    throw err;
-  }
+        return result.rows;
+    } catch (err) {
+        console.error("Error fetching events:", err);
+        throw err;
+    }
 }
 
 async function getRegisteredUsers(eventId) {
-  try {
-    const pool = await getPool();
-    const request = pool.request();
-    request.input("event_id", sql.Int, eventId);
-
-    const result = await request.query(`
+    try {
+        const pool = await getPool();
+        const result = await pool.query(`
       SELECT account_id
       FROM RegisteredList
-      WHERE event_id = @event_id
-    `);
-    return result.recordset;
-  } catch (err) {
-    console.error("Error fetching registered users:", err);
-    throw err;
-  }
+      WHERE event_id = $1
+    `, [eventId]);
+        return result.rows;
+    } catch (err) {
+        console.error("Error fetching registered users:", err);
+        throw err;
+    }
 }
 
 module.exports = {
@@ -253,9 +223,6 @@ module.exports = {
     createEvent,
     updateEvent,
     registerEvent,
-    unregisterEvent,
-    getAllUpcomingEvents,
-    getRegisteredUsers,
     unregisterEvent,
     getAllUpcomingEvents,
     getRegisteredUsers

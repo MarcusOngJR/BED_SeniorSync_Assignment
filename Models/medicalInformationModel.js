@@ -1,21 +1,14 @@
-const sql = require("mssql");
-const dbConfig = require("../dbConfig");
-const { get } = require("../Controllers/mapController");
-
 const { getPool } = require('../Services/pool');
 
 async function getMedicationByAccountID(accountId) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("accountId", sql.Int, accountId);
-
-    const result = await request.query(
-      "SELECT * FROM MedicationList WHERE account_id = @accountId"
+    const pool = await getPool();
+    const result = await pool.query(
+      "SELECT * FROM MedicationList WHERE account_id = $1",
+      [accountId]
     );
 
-    return result.recordset; // Return all medications for the account
+    return result.rows; // Return all medications for the account
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -23,17 +16,14 @@ async function getMedicationByAccountID(accountId) {
 }
 
 async function getMedicationByID(medicationId) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("medicationId", sql.Int, medicationId);
-
-    const result = await request.query(
-      "SELECT * FROM MedicationList WHERE med_id = @medicationId"
+    const pool = await getPool();
+    const result = await pool.query(
+      "SELECT * FROM MedicationList WHERE med_id = $1",
+      [medicationId]
     );
 
-    return result.recordset[0]; // Return the specific medication
+    return result.rows[0]; // Return the specific medication
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -41,17 +31,14 @@ async function getMedicationByID(medicationId) {
 }
 
 async function getMedicalConditionByID(conditionId) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("conditionId", sql.Int, conditionId);
-
-    const result = await request.query(
-      "SELECT * FROM MedicalConditionList WHERE medc_id = @conditionId"
+    const pool = await getPool();
+    const result = await pool.query(
+      "SELECT * FROM MedicalConditionList WHERE medc_id = $1",
+      [conditionId]
     );
 
-    return result.recordset[0]; // Return the specific medical condition
+    return result.rows[0]; // Return the specific medical condition
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -59,17 +46,14 @@ async function getMedicalConditionByID(conditionId) {
 }
 
 async function getWeeklyTiming(med_id) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("med_id", sql.Int, med_id);
-
-    const result = await request.query(
-      "SELECT * FROM WeeklyMedicationTiming WHERE med_id = @med_id"
+    const pool = await getPool();
+    const result = await pool.query(
+      "SELECT * FROM WeeklyMedicationTiming WHERE med_id = $1",
+      [med_id]
     );
 
-    return result.recordset; // Return the weekly timing for the medication
+    return result.rows; // Return the weekly timing for the medication
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -77,19 +61,14 @@ async function getWeeklyTiming(med_id) {
 }
 
 async function saveWeeklyTiming(med_id, day, time) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("med_id", sql.Int, med_id);
-    request.input("day", sql.Int, day);
-    request.input("time", sql.NVarChar, time);
-
-    const result = await request.query(
-      "INSERT INTO WeeklyMedicationTiming (med_id, day, time) VALUES (@med_id, @day, @time)"
+    const pool = await getPool();
+    const result = await pool.query(
+      "INSERT INTO WeeklyMedicationTiming (med_id, day, time) VALUES ($1, $2, $3)",
+      [med_id, day, time]
     );
 
-    return result.rowsAffected > 0; // Return true if insertion was successful
+    return result.rowCount > 0; // Return true if insertion was successful
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -97,20 +76,16 @@ async function saveWeeklyTiming(med_id, day, time) {
 }
 
 async function getWeeklyTimingsByAccountID(accountId) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("accountId", sql.Int, accountId);
-
-    const result = await request.query(`
+    const pool = await getPool();
+    const result = await pool.query(`
       SELECT w.medTime_id, w.med_id, w.day, w.time, m.name, m.frequency
       FROM WeeklyMedicationTiming w
       INNER JOIN MedicationList m ON w.med_id = m.med_id
-      WHERE m.account_id = @accountId
-    `);
+      WHERE m.account_id = $1
+    `, [accountId]);
 
-    return result.recordset;
+    return result.rows;
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -120,17 +95,14 @@ async function getWeeklyTimingsByAccountID(accountId) {
 
 
 async function getMedicalConditionByAccountID(accountId) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("accountId", sql.Int, accountId);
-
-    const result = await request.query(
-      "SELECT * FROM MedicalConditionList WHERE acc_id = @accountId"
+    const pool = await getPool();
+    const result = await pool.query(
+      "SELECT * FROM MedicalConditionList WHERE acc_id = $1",
+      [accountId]
     );
 
-    return result.recordset; // Return all medical information for the account
+    return result.rows; // Return all medical information for the account
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -138,21 +110,20 @@ async function getMedicalConditionByAccountID(accountId) {
 }
 
 async function createMedicalCondition(accountId, condition) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("accountId", sql.Int, accountId);
-    request.input("name", sql.NVarChar, condition.name);
-    request.input("descr", sql.NVarChar, condition.descr);
-    request.input("prescription_date", sql.DateTime, condition.prescription_date);
-    request.input("mod_id", sql.Int, condition.mod_id || accountId);
-
-    const result = await request.query(
-      "INSERT INTO MedicalConditionList (name, descr, acc_id, prescription_date, mod_id, updated_at) VALUES (@name, @descr, @accountId, @prescription_date, @mod_id, NULL)"
+    const pool = await getPool();
+    const result = await pool.query(
+      "INSERT INTO MedicalConditionList (name, descr, acc_id, prescription_date, mod_id, updated_at) VALUES ($1, $2, $3, $4, $5, NULL)",
+      [
+        condition.name,
+        condition.descr,
+        accountId,
+        condition.prescription_date,
+        condition.mod_id || accountId
+      ]
     );
 
-    return result.rowsAffected > 0;
+    return result.rowCount > 0;
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -160,25 +131,22 @@ async function createMedicalCondition(accountId, condition) {
 }
 
 async function createMedication(accountId, medication) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("accountId", sql.Int, accountId);
-    request.input("name", sql.NVarChar, medication.name);
-    request.input("description", sql.NVarChar, medication.description);
-    request.input("time", sql.NVarChar, medication.time || null);
-    request.input("dosage", sql.NVarChar, medication.dosage);
-    request.input("frequency", sql.NVarChar, medication.frequency);
-    request.input("start_date", sql.DateTime, medication.start_date);
-
-
-    const result = await request.query(
-      "  INSERT INTO MedicationList (account_id, name, description, dosage, time, frequency, start_date) VALUES (@accountId, @name, @description, @dosage, @time, @frequency, @start_date); SELECT SCOPE_IDENTITY() AS success;"
+    const pool = await getPool();
+    const result = await pool.query(
+      "INSERT INTO MedicationList (account_id, name, description, dosage, time, frequency, start_date) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING med_id",
+      [
+        accountId,
+        medication.name,
+        medication.description,
+        medication.dosage,
+        medication.time || null,
+        medication.frequency,
+        medication.start_date
+      ]
     );
 
-    return result.recordset[0].success;
-    return result.recordset[0].success;
+    return result.rows[0].med_id;
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -186,17 +154,14 @@ async function createMedication(accountId, medication) {
 }
 
 async function deleteMedication(medicationId) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("medicationId", sql.Int, medicationId);
-
-    const result = await request.query(
-      "DELETE FROM MedicationList WHERE med_id = @medicationId"
+    const pool = await getPool();
+    const result = await pool.query(
+      "DELETE FROM MedicationList WHERE med_id = $1",
+      [medicationId]
     );
 
-    return result.rowsAffected > 0; // Return true if deletion was successful
+    return result.rowCount > 0; // Return true if deletion was successful
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -204,17 +169,14 @@ async function deleteMedication(medicationId) {
 }
 
 async function deleteMedicalCondition(conditionId) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("conditionId", sql.Int, conditionId);
-
-    const result = await request.query(
-      "DELETE FROM MedicalConditionList WHERE medc_id = @conditionId"
+    const pool = await getPool();
+    const result = await pool.query(
+      "DELETE FROM MedicalConditionList WHERE medc_id = $1",
+      [conditionId]
     );
 
-    return result.rowsAffected > 0; // Return true if deletion was successful
+    return result.rowCount > 0; // Return true if deletion was successful
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -222,17 +184,14 @@ async function deleteMedicalCondition(conditionId) {
 }
 
 async function getMedicationAssociatedWithMedicalCondition(conditionId) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("conditionId", sql.Int, conditionId);
-
-    const result = await request.query(
-      "SELECT * FROM MedicationConditionAssociationList WHERE medc_id = @conditionId"
+    const pool = await getPool();
+    const result = await pool.query(
+      "SELECT * FROM MedicationConditionAssociationList WHERE medc_id = $1",
+      [conditionId]
     );
 
-    return result.recordset; // Return all medications associated with the medical condition
+    return result.rows; // Return all medications associated with the medical condition
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -240,23 +199,22 @@ async function getMedicationAssociatedWithMedicalCondition(conditionId) {
 }
 
 async function updateMedication(med_id, data) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("med_id", sql.Int, med_id);
-    request.input("name", sql.NVarChar, data.name);
-    request.input("description", sql.NVarChar, data.description || '');
-    request.input("dosage", sql.NVarChar, data.dosage);
-    request.input("time", sql.NVarChar, data.time || '');
-    request.input("frequency", sql.NVarChar, data.frequency);
-    request.input("start_date", sql.DateTime, data.start_date);
-
-    const result = await request.query(
-      "UPDATE MedicationList SET name = @name, description = @description, dosage = @dosage, time = @time, frequency = @frequency, start_date = @start_date WHERE med_id = @med_id"
+    const pool = await getPool();
+    const result = await pool.query(
+      "UPDATE MedicationList SET name = $1, description = $2, dosage = $3, time = $4, frequency = $5, start_date = $6 WHERE med_id = $7",
+      [
+        data.name,
+        data.description || '',
+        data.dosage,
+        data.time || '',
+        data.frequency,
+        data.start_date,
+        med_id
+      ]
     );
 
-    return result.rowsAffected > 0; // Return true if update was successful
+    return result.rowCount > 0; // Return true if update was successful
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -264,22 +222,21 @@ async function updateMedication(med_id, data) {
 }
 
 async function updateMedicalCondition(medc_id, data) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("medc_id", sql.Int, medc_id);
-    request.input("name", sql.NVarChar, data.name);
-    request.input("descr", sql.NVarChar, data.descr || '');
-    request.input("prescription_date", sql.DateTime, data.prescription_date);
-    request.input("mod_id", sql.Int, data.mod_id || medc_id);
-    request.input("updated_at", sql.DateTime, data.updated_at); // Use current date and time for updated_at
-
-    const result = await request.query(
-      "UPDATE MedicalConditionList SET name = @name, descr = @descr, updated_at = @updated_at, prescription_date = @prescription_date, mod_id = @mod_id WHERE medc_id = @medc_id"
+    const pool = await getPool();
+    const result = await pool.query(
+      "UPDATE MedicalConditionList SET name = $1, descr = $2, updated_at = $3, prescription_date = $4, mod_id = $5 WHERE medc_id = $6",
+      [
+        data.name,
+        data.descr || '',
+        data.updated_at,
+        data.prescription_date,
+        data.mod_id || medc_id,
+        medc_id
+      ]
     );
 
-    return result.rowsAffected > 0; // Return true if update was successful
+    return result.rowCount > 0; // Return true if update was successful
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -287,27 +244,25 @@ async function updateMedicalCondition(medc_id, data) {
 }
 
 async function associateMedicationWithMedicalCondition(med_id, medc_id) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("med_id", sql.Int, med_id);
-    request.input("medc_id", sql.Int, medc_id);
+    const pool = await getPool();
 
     // Check if the association already exists
-    const existingAssociation = await request.query(
-      "SELECT * FROM MedicationConditionAssociationList WHERE med_id = @med_id AND medc_id = @medc_id"
+    const existingAssociation = await pool.query(
+      "SELECT * FROM MedicationConditionAssociationList WHERE med_id = $1 AND medc_id = $2",
+      [med_id, medc_id]
     );
 
-    if (existingAssociation.recordset.length > 0) {
+    if (existingAssociation.rows.length > 0) {
       return false; // Association already exists
     }
 
-    const result = await request.query(
-      "INSERT INTO MedicationConditionAssociationList (med_id, medc_id) VALUES (@med_id, @medc_id)"
+    const result = await pool.query(
+      "INSERT INTO MedicationConditionAssociationList (med_id, medc_id) VALUES ($1, $2)",
+      [med_id, medc_id]
     );
 
-    return result.rowsAffected > 0; // Return true if association was successful
+    return result.rowCount > 0; // Return true if association was successful
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -315,18 +270,14 @@ async function associateMedicationWithMedicalCondition(med_id, medc_id) {
 }
 
 async function deleteMedicationConditionAssociation(med_id, medc_id) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("med_id", sql.Int, med_id);
-    request.input("medc_id", sql.Int, medc_id);
-
-    const result = await request.query(
-      "DELETE FROM MedicationConditionAssociationList WHERE med_id = @med_id AND medc_id = @medc_id"
+    const pool = await getPool();
+    const result = await pool.query(
+      "DELETE FROM MedicationConditionAssociationList WHERE med_id = $1 AND medc_id = $2",
+      [med_id, medc_id]
     );
 
-    return result.rowsAffected > 0; // Return true if deletion was successful
+    return result.rowCount > 0; // Return true if deletion was successful
   } catch (error) {
     console.error("Model error:", error);
     throw error;
@@ -334,17 +285,14 @@ async function deleteMedicationConditionAssociation(med_id, medc_id) {
 }
 
 async function resetWeeklyTiming(med_id) {
-  let connection;
   try {
-    connection = await getPool();
-    const request = connection.request();
-    request.input("med_id", sql.Int, med_id);
-
-    const result = await request.query(
-      "DELETE FROM WeeklyMedicationTiming WHERE med_id = @med_id"
+    const pool = await getPool();
+    const result = await pool.query(
+      "DELETE FROM WeeklyMedicationTiming WHERE med_id = $1",
+      [med_id]
     );
 
-    return result.rowsAffected > 0; // Return true if reset was successful
+    return result.rowCount > 0; // Return true if reset was successful
   } catch (error) {
     console.error("Model error:", error);
     throw error;

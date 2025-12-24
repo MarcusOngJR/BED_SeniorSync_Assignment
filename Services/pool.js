@@ -1,33 +1,33 @@
 // pool.js
-const sql = require("mssql");
-
-// Change this to your actual database configuration
+const { Pool } = require("pg");
 const dbConfig = require("../dbConfig");
-
-console.log("CONNECTING WITH:", {
-  user: dbConfig.user,
-  password_set: !!dbConfig.password,
-  server: dbConfig.server,
-  port: dbConfig.port,
-  database: dbConfig.database,
-});
 
 let pool;
 
+console.log("CONNECTING WITH:", {
+  connectionString: dbConfig.connectionString ? "Set" : "Not Set",
+  ssl: dbConfig.ssl
+});
+
 /**
- * Returns a singleton MSSQL connection pool.
+ * Returns a singleton Postgres connection pool.
  */
 async function getPool() {
-  if (pool && pool.connected) {
+  if (pool) {
     return pool;
   }
 
   try {
-    pool = await sql.connect(dbConfig);
+    pool = new Pool(dbConfig);
+
+    // Test connection
+    const client = await pool.connect();
     console.log("✅ New pool connected");
+    client.release();
+
     return pool;
   } catch (err) {
-    console.error("❌ Failed to connect to SQL Server:", err);
+    console.error("❌ Failed to connect to Postgres:", err);
     throw err;
   }
 }
@@ -38,10 +38,10 @@ async function getPool() {
 async function closePool() {
   if (pool) {
     try {
-      await pool.close();
-      console.log("🛑 SQL Server pool closed");
+      await pool.end();
+      console.log("🛑 Postgres pool closed");
     } catch (err) {
-      console.error("❌ Failed to close SQL pool:", err);
+      console.error("❌ Failed to close Postgres pool:", err);
     }
   }
 }
@@ -49,5 +49,4 @@ async function closePool() {
 module.exports = {
   getPool,
   closePool,
-  sql
 };

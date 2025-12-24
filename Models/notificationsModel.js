@@ -1,53 +1,50 @@
-const sql = require("mssql");
-const dbConfig = require("../dbConfig");
 const { getPool } = require('../Services/pool');
 
-
-
-
 async function getAllNotificationsByAccountId(accountId) {
-    try {
-        const pool = await getPool();
-        const result = await pool.request()
-            .input("accountId", sql.Int, accountId)
-            .query("SELECT * FROM notificationList WHERE acc_id = @accountId ORDER BY time desc");
+  try {
+    const pool = await getPool();
+    const result = await pool.query(
+      "SELECT * FROM notificationList WHERE acc_id = $1 ORDER BY time desc",
+      [accountId]
+    );
 
-        return result.recordset; // Return the array of notifications
-    } catch (error) {
-        console.error("Error fetching notifications:", error);
-        throw error;
-    }
+    return result.rows; // Return the array of notifications
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    throw error;
+  }
 }
 
 async function getUnnotifiedByAccountId(accountId) {
-    try {
-        const pool = await getPool();
-        const result = await pool.request()
-            .input("accountId", sql.Int, accountId)
-            .query("SELECT * FROM notificationList WHERE acc_id = @accountId AND notified = 0 ORDER BY time desc");
+  try {
+    const pool = await getPool();
+    const result = await pool.query(
+      "SELECT * FROM notificationList WHERE acc_id = $1 AND notified = 0 ORDER BY time desc",
+      [accountId]
+    );
 
-        return result.recordset; // Return the array of unnotified notifications
-    }
-    catch (error) {
-        console.error("Error fetching unnotified notifications:", error);
-        throw error;
-    }
+    return result.rows; // Return the array of unnotified notifications
+  }
+  catch (error) {
+    console.error("Error fetching unnotified notifications:", error);
+    throw error;
+  }
 }
 
 async function markNotificationAsNotified(notiId, accountId) {
-    try {
-        console.log(notiId)
-        const pool = await getPool();
-        const result = await pool.request()
-            .input("notiId", sql.Int, notiId)
-            .input("accountId", sql.Int, accountId)
-            .query("UPDATE notificationList SET notified = 1 WHERE noti_id = @notiId AND acc_id = @accountId");
-        console.log("Notification marked as notified:", result.rowsAffected[0]);
-        return result;
-    } catch (error) {
-        console.error("Error marking notification as notified:", error);
-        throw error;
-    }
+  try {
+    console.log(notiId)
+    const pool = await getPool();
+    const result = await pool.query(
+      "UPDATE notificationList SET notified = 1 WHERE noti_id = $1 AND acc_id = $2",
+      [notiId, accountId]
+    );
+    console.log("Notification marked as notified:", result.rowCount);
+    return result;
+  } catch (error) {
+    console.error("Error marking notification as notified:", error);
+    throw error;
+  }
 }
 
 async function createNotification(payload) {
@@ -57,33 +54,28 @@ async function createNotification(payload) {
 
   try {
     const pool = await getPool();
-    const request = pool.request();
-
-    request
-      .input("type", sql.VarChar, payload.type)
-      .input("acc_id", sql.Int, payload.acc_id)
-      .input("description", sql.VarChar, payload.description)
-      .input("time", sql.DateTime, payload.time);
 
     let query;
+    let values;
 
     if (payload.asso_id !== undefined) {
-      request.input("asso_id", sql.Int, payload.asso_id);
       query = `
         INSERT INTO notificationList (type, acc_id, description, time, asso_id)
-        OUTPUT INSERTED.noti_id
-        VALUES (@type, @acc_id, @description, @time, @asso_id)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING noti_id
       `;
+      values = [payload.type, payload.acc_id, payload.description, payload.time, payload.asso_id];
     } else {
       query = `
         INSERT INTO notificationList (type, acc_id, description, time)
-        OUTPUT INSERTED.noti_id
-        VALUES (@type, @acc_id, @description, @time)
+        VALUES ($1, $2, $3, $4)
+        RETURNING noti_id
       `;
+      values = [payload.type, payload.acc_id, payload.description, payload.time];
     }
 
-    const result = await request.query(query);
-    const noti_id = result.recordset[0]?.noti_id;
+    const result = await pool.query(query, values);
+    const noti_id = result.rows[0]?.noti_id;
 
     console.log("Notification created with noti_id:", noti_id);
     return noti_id;
@@ -95,34 +87,28 @@ async function createNotification(payload) {
 }
 
 async function hasSentBudgetNotificationThisMonth(accountId) {
-    const pool = await getPool();
-    const result = await pool.request()
-        .input("accountId", sql.Int, accountId)
-        .query(`
+  const pool = await getPool();
+  const result = await pool.query(`
             SELECT COUNT(*) AS count
             FROM NotificationList
-            WHERE acc_id = @accountId
+            WHERE acc_id = $1
               AND type = 'finance'
-        `);
-    return result.recordset[0].count > 0;
+        `, [accountId]);
+  return parseInt(result.rows[0].count) > 0;
 }
 
 async function hasSentMedicationNotificationToday(med_id) {
   try {
     const pool = await getPool();
-    const request = pool.request();
-
-    request.input("med_id", sql.Int, med_id);
-
-    const result = await request.query(`
+    const result = await pool.query(`
       SELECT 1
       FROM notificationList
       WHERE type = 'medication'
-        AND asso_id = @med_id
-        AND CAST(DATEADD(HOUR, 8, time) AS DATE) = CAST(GETDATE() AS DATE)
-    `);
+        AND asso_id = $1
+        AND (time + interval '8 hours')::date = CURRENT_DATE
+    `, [med_id]);
 
-    const alreadySent = result.recordset.length > 0;
+    const alreadySent = result.rows.length > 0;
     return alreadySent;
   } catch (err) {
     console.error("Error checking medication notification:", err);
@@ -134,19 +120,15 @@ async function hasSentMedicationNotificationToday(med_id) {
 async function hasSentMedicationNotificationPerTiming(medTime_id) {
   try {
     const pool = await getPool();
-    const request = pool.request();
-
-    request.input("medTime_id", sql.Int, medTime_id);
-
-    const result = await request.query(`
+    const result = await pool.query(`
       SELECT 1
       FROM notificationList
       WHERE type = 'weekly'
-        AND asso_id = @medTime_id
-        AND CAST(DATEADD(HOUR, 8, time) AS DATE) = CAST(GETDATE() AS DATE)
-    `);
+        AND asso_id = $1
+        AND (time + interval '8 hours')::date = CURRENT_DATE
+    `, [medTime_id]);
 
-    return result.recordset.length > 0;
+    return result.rows.length > 0;
   } catch (error) {
     console.error("Error checking weekly medication notification:", error);
     throw error;
@@ -156,21 +138,16 @@ async function hasSentMedicationNotificationPerTiming(medTime_id) {
 async function hasSentEventNotificationForEvent(eventId, accountId) {
   try {
     const pool = await getPool();
-    const request = pool.request();
-
-    request.input("event_id", sql.Int, eventId);
-    request.input("acc_id", sql.Int, accountId);
-
-    const result = await request.query(`
+    const result = await pool.query(`
       SELECT 1
       FROM notificationList
       WHERE type = 'event'
-        AND asso_id = @event_id
-        AND acc_id = @acc_id
-        AND CAST(DATEADD(HOUR, 8, time) AS DATE) = CAST(GETDATE() AS DATE)
-    `);
+        AND asso_id = $1
+        AND acc_id = $2
+        AND (time + interval '8 hours')::date = CURRENT_DATE
+    `, [eventId, accountId]);
 
-    return result.recordset.length > 0;
+    return result.rows.length > 0;
   } catch (err) {
     console.error("Error checking event notification:", err);
     throw err;
@@ -180,16 +157,14 @@ async function hasSentEventNotificationForEvent(eventId, accountId) {
 async function hasSentTaskNotificationToday(taskId) {
   try {
     const pool = await getPool();
-    const request = pool.request();
-    request.input("task_id", sql.Int, taskId);
-    const result = await request.query(`
+    const result = await pool.query(`
       SELECT 1
       FROM notificationList
       WHERE type = 'task'
-        AND asso_id = @task_id
-        AND CAST(DATEADD(HOUR, 8, time) AS DATE) = CAST(GETDATE() AS DATE)
-    `);
-    return result.recordset.length > 0;
+        AND asso_id = $1
+        AND (time + interval '8 hours')::date = CURRENT_DATE
+    `, [taskId]);
+    return result.rows.length > 0;
   } catch (err) {
     console.error("Error checking task notification:", err);
     throw err;
@@ -197,29 +172,29 @@ async function hasSentTaskNotificationToday(taskId) {
 }
 
 async function clearNotificationsByAccountId(accountId) {
-    try {
-        const pool = await getPool();
-        const result = await pool.request()
-            .input("accountId", sql.Int, accountId)
-            .query("DELETE FROM notificationList WHERE acc_id = @accountId");
-        console.log("Notifications cleared:", result.rowsAffected[0]);
-        return result;
-    } catch (error) {
-        console.error("Error clearing notifications:", error);
-        throw error;
-    }
+  try {
+    const pool = await getPool();
+    const result = await pool.query(
+      "DELETE FROM notificationList WHERE acc_id = $1",
+      [accountId]
+    );
+    console.log("Notifications cleared:", result.rowCount);
+    return result;
+  } catch (error) {
+    console.error("Error clearing notifications:", error);
+    throw error;
+  }
 }
 
 module.exports = {
-    getAllNotificationsByAccountId,
-    getUnnotifiedByAccountId,
-    markNotificationAsNotified,
-    createNotification,
-    hasSentBudgetNotificationThisMonth,
-    hasSentMedicationNotificationToday,
-    hasSentMedicationNotificationPerTiming,
-    hasSentMedicationNotificationPerTiming,
-    hasSentEventNotificationForEvent,
-    hasSentTaskNotificationToday,
-    clearNotificationsByAccountId
+  getAllNotificationsByAccountId,
+  getUnnotifiedByAccountId,
+  markNotificationAsNotified,
+  createNotification,
+  hasSentBudgetNotificationThisMonth,
+  hasSentMedicationNotificationToday,
+  hasSentMedicationNotificationPerTiming,
+  hasSentEventNotificationForEvent,
+  hasSentTaskNotificationToday,
+  clearNotificationsByAccountId
 };

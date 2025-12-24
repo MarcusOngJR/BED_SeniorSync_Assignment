@@ -1,6 +1,3 @@
-const sql = require("mssql");
-const dbConfig = require("../dbConfig");
-
 const { OpenAI } = require("openai");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -15,5 +12,5 @@ async function getChatbotResponse(messages) {
 }
 
 module.exports = {
-    getChatbotResponse
+  getChatbotResponse
 };
