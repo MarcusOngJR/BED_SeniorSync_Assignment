@@ -19,7 +19,7 @@ async function getUnnotifiedByAccountId(accountId) {
   try {
     const pool = await getPool();
     const result = await pool.query(
-      "SELECT * FROM notificationList WHERE acc_id = $1 AND notified = 0 ORDER BY time desc",
+      "SELECT * FROM notificationList WHERE acc_id = $1 AND notified = false ORDER BY time desc",
       [accountId]
     );
 
@@ -36,7 +36,7 @@ async function markNotificationAsNotified(notiId, accountId) {
     console.log(notiId)
     const pool = await getPool();
     const result = await pool.query(
-      "UPDATE notificationList SET notified = 1 WHERE noti_id = $1 AND acc_id = $2",
+      "UPDATE notificationList SET notified = true WHERE noti_id = $1 AND acc_id = $2",
       [notiId, accountId]
     );
     console.log("Notification marked as notified:", result.rowCount);

@@ -1,0 +1,52 @@
+{
+    "eventNames": [
+        "Morning Yoga Session",
+        "Community Garden Day",
+        "Art & Craft Workshop",
+        "Senior Fitness Class",
+        "Book Club Meeting",
+        "Cooking Together",
+        "Music Appreciation Hour",
+        "Walking Group Adventure",
+        "Board Game Tournament",
+        "Technology Help Session"
+    ],
+    "descriptions": [
+        "Join us for a relaxing and rejuvenating session perfect for all fitness levels.",
+        "Come together with fellow community members for a fun and engaging activity.",
+        "Learn new skills and make friends in this interactive workshop.",
+        "Stay active and healthy with our specially designed program.",
+        "Connect with others who share your interests and passions.",
+        "Enjoy quality time with your community in a welcoming environment.",
+        "Discover something new and exciting in this hands-on experience.",
+        "Participate in this enriching activity designed just for you."
+    ],
+    "bannerImages": [
+        "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800",
+        "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800",
+        "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=800",
+        "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800",
+        "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800",
+        "https://images.unsplash.com/photo-1509099863731-ef4bff19e808?w=800",
+        "https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=800",
+        "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800"
+    ],
+    "locations": [
+        "Community Center - Main Hall",
+        "Senior Activity Center",
+        "Recreation Room",
+        "Garden Pavilion",
+        "Multipurpose Room",
+        "Wellness Center",
+        "Arts & Crafts Studio",
+        "Outdoor Courtyard"
+    ],
+    "defaultOrgId": 1,
+    "eventTimes": [
+        "09:00:00",
+        "10:00:00",
+        "14:00:00",
+        "15:00:00",
+        "16:00:00"
+    ]
+}

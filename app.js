@@ -1,5 +1,5 @@
 const express = require("express");
-const sql = require("mssql");
+
 const dotenv = require("dotenv");
 const path = require("path");
 const http = require('http');
@@ -30,6 +30,10 @@ notificationEngine.init({
   io: app.get("io"),
   userSocketMap
 });
+
+// Initialize event scheduler for automatic event generation
+const eventScheduler = require("./Services/eventScheduler.js");
+eventScheduler.start(); // Creates random events every 5 hours
 
 
 const accountController = require("./Controllers/accountController.js");
@@ -242,6 +246,7 @@ server.listen(port, () => {
 // Graceful shutdown
 process.on("SIGINT", async () => {
   console.log("Server is gracefully shutting down");
+  eventScheduler.stop(); // Stop event scheduler
   await closePool(); // Close the database connection pool
   console.log("Database connections closed");
   process.exit(0);

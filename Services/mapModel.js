@@ -1,7 +1,6 @@
 const axios = require("axios");
 const dotenv = require("dotenv");
-const sql = require("mssql");
-const dbConfig = require("../dbConfig");
+const { getPool } = require('./pool');
 dotenv.config();
 
 let inMemoryToken = null;
@@ -17,8 +16,8 @@ function getInMemoryAccessToken() {
 async function getAccessToken() {
     try {
         console.log("BASE_URL:", process.env.ONEMAP_BASE_URL);
-console.log("EMAIL:", process.env.ONEMAP_API_EMAIL);
-console.log("PASSWORD:", process.env.ONEMAP_API_PASSWORD);
+        console.log("EMAIL:", process.env.ONEMAP_API_EMAIL);
+        console.log("PASSWORD:", process.env.ONEMAP_API_PASSWORD);
 
         const response = await axios.post(
             `${process.env.ONEMAP_BASE_URL}/api/auth/post/getToken`,
@@ -80,100 +79,76 @@ async function geocode(address) {
 
 //get user address
 async function getUserAddress(accountId) {
-    let connection;
     try {
-        connection = await sql.connect(dbConfig);
-        const request = connection.request();
-        request.input("accountId", sql.Int, accountId);
-
-        const result = await request.query(`
+        const pool = await getPool();
+        const result = await pool.query(`
             SELECT address FROM AccountProfile
-            WHERE id = @accountId
-        `);
+            WHERE id = $1
+        `, [accountId]);
 
-        if (result.recordset.length > 0) {
-            return result.recordset[0].address;
+        if (result.rows.length > 0) {
+            return result.rows[0].address;
         } else {
             throw new Error("Address not found for this account");
         }
     } catch (error) {
         console.error("Model error:", error);
         throw error;
-    } finally {
-        if (connection) {
-            connection.close();
-        }
     }
 }
 // Update user address
 async function updateUserAddress(accountId, address) {
-    let connection;
     try {
-        connection = await sql.connect(dbConfig);
-        const request = connection.request();
-        request.input("accountId", sql.Int, accountId);
-        request.input("address", sql.NVarChar, address);
-
-        const result = await request.query(`
+        const pool = await getPool();
+        const result = await pool.query(`
             UPDATE AccountProfile
-            SET address = @address
-            WHERE id = @accountId
-        `);
+            SET address = $1
+            WHERE id = $2
+        `, [address, accountId]);
 
-        if (result.rowsAffected > 0){
+        if (result.rowCount > 0) {
             return address;
         };
     } catch (error) {
         console.error("Model error:", error);
         throw error;
-    } finally {
-        if (connection) {
-            connection.close();
-        }
     }
 }
 // Delete user address
 async function deleteAddress(accountId) {
-    let connection;
     try {
-        connection = await sql.connect(dbConfig);
-        const request = connection.request();
-        request.input("accountId", sql.Int, accountId);
-        const result = await request.query(`
+        const pool = await getPool();
+        const result = await pool.query(`
             UPDATE AccountProfile
             SET address = NULL
-            WHERE id = @accountId;
-        `);
+            WHERE id = $1
+        `, [accountId]);
 
-        return result.rowsAffected > 0; 
+        return result.rowCount > 0;
     } catch (error) {
         console.error("Model error:", error);
         throw error;
-    } finally {
-        if (connection) {
-            connection.close();
-        }
     }
 }
 
 async function getRoute(startLat, startLng, endLat, endLng, routeType) {
-  let accessToken = getInMemoryAccessToken();
-        if (!accessToken) {
-            accessToken = await getAccessToken();
-        }
+    let accessToken = getInMemoryAccessToken();
+    if (!accessToken) {
+        accessToken = await getAccessToken();
+    }
 
-  const res = await axios.get(`${process.env.ONE_MAP_BASE_URL}/api/routingsvc/route`, {
-    params: {
-      start: `${startLat},${startLng}`,
-      end: `${endLat},${endLng}`,
-      routeType,
-    },
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+    const res = await axios.get(`${process.env.ONE_MAP_BASE_URL}/api/routingsvc/route`, {
+        params: {
+            start: `${startLat},${startLng}`,
+            end: `${endLat},${endLng}`,
+            routeType,
+        },
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    });
 
-  return res.data;
+    return res.data;
 }
 
 

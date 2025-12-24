@@ -111,7 +111,7 @@ async function createEvent(eventData) {
             eventData.time,
             eventData.location,
             parseInt(eventData.org_id),
-            eventData.weekly ? 1 : 0,
+            eventData.weekly ? true : false, // Fix: Use boolean
             eventData.equipment_required || null,
             eventData.banner_image || ""
         ]);
@@ -144,7 +144,7 @@ async function updateEvent(eventId, eventData, accountId) {
             new Date(eventData.date),
             eventData.time,
             eventData.location,
-            eventData.weekly ? 1 : 0,
+            eventData.weekly ? true : false, // Fix: Use boolean
             eventData.equipment_required,
             eventData.banner_image || "",
             eventId,
@@ -191,8 +191,8 @@ async function getAllUpcomingEvents() {
         const result = await pool.query(`
       SELECT *
       FROM EventList
-      WHERE canceled = 0
-    `);
+      WHERE canceled = false
+    `); // Fix: Use boolean comparison
         return result.rows;
     } catch (err) {
         console.error("Error fetching events:", err);

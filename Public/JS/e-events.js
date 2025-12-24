@@ -5,7 +5,7 @@ let visibleCount = 5;
 
 //#region Show All Events
 document.addEventListener("DOMContentLoaded", async () => {
-    const account_id = localStorage.getItem("account_id")? parseInt(localStorage.getItem("account_id")) : 1;
+    const account_id = localStorage.getItem("account_id") ? parseInt(localStorage.getItem("account_id")) : 1;
     const user = JSON.parse(localStorage.getItem("user")) || {};
     const EventsContainer = document.getElementById("AllEventsContainer");
 
@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     else {
         addEventButton.hidden = true; // Hide add event button for non-organizers
         RegisteredEvents.hidden = false;
-        }
+    }
 
     await displayAllEvents();
 });
@@ -138,89 +138,89 @@ async function displayRegistered() {
 
 //#region Event Registration and Unregistration
 document.getElementById("EventsContainer").addEventListener("click", async function (event) {
-  if (event.target.classList.contains("unregister-button")) {
-    const button = event.target;
-    const eventId = button.getAttribute("data-event-id");
+    if (event.target.classList.contains("unregister-button")) {
+        const button = event.target;
+        const eventId = button.getAttribute("data-event-id");
 
-    const user = JSON.parse(localStorage.getItem("user"));
-    const token = user?.token;
-    const accId = user?.id;
+        const user = JSON.parse(localStorage.getItem("user"));
+        const token = user?.token;
+        const accId = user?.id;
 
-    if (!token || !accId) {
-      showMessagePopover("You must be logged in to unregister.");
-      return;
+        if (!token || !accId) {
+            showMessagePopover("You must be logged in to unregister.");
+            return;
+        }
+
+        try {
+            const response = await fetch(`/unregisterEvent/${eventId}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    "authorization": `Bearer ${token}`
+                },
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showMessagePopover("Successfully unregistered from the event.");
+                document.getElementById(`event-${eventId}`).remove();
+            } else {
+                showMessagePopover(result.message || "Unregister failed.");
+            }
+        } catch (error) {
+            console.error("Unregister error:", error);
+            showMessagePopover("Something went wrong.");
+        }
     }
-
-    try {
-      const response = await fetch(`/unregisterEvent/${eventId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "authorization": `Bearer ${token}`
-        },
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        showMessagePopover("Successfully unregistered from the event.");
-        document.getElementById(`event-${eventId}`).remove();
-      } else {
-        showMessagePopover(result.message || "Unregister failed.");
-      }
-    } catch (error) {
-      console.error("Unregister error:", error);
-      showMessagePopover("Something went wrong.");
-    }
-  }
 });
 
 //Event registration
 document.getElementById("EventsContainer").addEventListener("click", async function (event) {
-  if (event.target.classList.contains("register-button")) {
-    const button = event.target;
-    const eventId = button.getAttribute("data-event-id");
+    if (event.target.classList.contains("register-button")) {
+        const button = event.target;
+        const eventId = button.getAttribute("data-event-id");
 
-    const user = JSON.parse(localStorage.getItem("user"));
-    const token = user?.token;
-    const accId = user?.id;
+        const user = JSON.parse(localStorage.getItem("user"));
+        const token = user?.token;
+        const accId = user?.id;
 
-    if (!token || !accId) {
-      showMessagePopover("You must be logged in to register.");
-      return;
+        if (!token || !accId) {
+            showMessagePopover("You must be logged in to register.");
+            return;
+        }
+        //fetch request to register for the event
+        try {
+            const response = await fetch(`/registerEvent/${eventId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "authorization": `Bearer ${token}`
+                },
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showMessagePopover("Successfully registered for the event. Your details will be sent to the organizer.");
+                // Optional: change button text or disable it
+            } else {
+                showMessagePopover(result.message || "Failed to register.");
+            }
+        } catch (error) {
+            console.error("Register error:", error);
+            showMessagePopover("An error occurred during registration.");
+        }
     }
-//fetch request to register for the event
-    try {
-      const response = await fetch(`/registerEvent/${eventId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "authorization": `Bearer ${token}`
-        },
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        showMessagePopover("Successfully registered for the event. Your details will be sent to the organizer.");
-        // Optional: change button text or disable it
-      } else {
-        showMessagePopover(result.message || "Failed to register.");
-      }
-    } catch (error) {
-      console.error("Register error:", error);
-      showMessagePopover("An error occurred during registration.");
-    }
-  }
 });
 //#endregion
 
 
 //#region Render Events for All Events and Registered Events
-function renderEvents(){
+function renderEvents() {
     const EventsContainer = document.getElementById("AllEventsContainer");
     const user = JSON.parse(localStorage.getItem("user")) || {};
-    
+
     if (!window.allEvents || !Array.isArray(window.allEvents)) {
         EventsContainer.innerHTML = "<p>No events found.</p>";
         return;
@@ -249,16 +249,23 @@ document.getElementById("seeMoreBtn").addEventListener("click", () => {
     renderEvents();
 });
 
-function renderEvent(event, userRole, view){
+function renderEvent(event, userRole, view) {
     const date = event.date.substring(0, 10);
-    const time = event.time.substring(11, 16);
-    // Ensure date and time are in the correct format
+    // Handle time format - could be "HH:MM:SS" or "YYYY-MM-DDTHH:MM:SS"
+    let time;
+    if (event.time.includes('T')) {
+        // Full datetime format
+        time = event.time.substring(11, 16);
+    } else {
+        // Just time format (HH:MM:SS)
+        time = event.time.substring(0, 5);
+    }
 
     const datetime = `${date}T${time}:00`;
     const eventDate = new Date(datetime);
 
-    const formattedDate = eventDate.toLocaleDateString(undefined, {year: 'numeric', month: 'long', day: 'numeric'});
-    const formattedTime = eventDate.toLocaleTimeString(undefined, {hour: '2-digit', minute: '2-digit'});
+    const formattedDate = eventDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const formattedTime = eventDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
     let actionButton = "";
     if (view === "registered") {
@@ -270,7 +277,7 @@ function renderEvent(event, userRole, view){
         actionButton = `<button class="register-button" data-event-id="${event.id}">Register</button>`;
     }
 
-     return `
+    return `
         <div class="event-card" id="event-${event.id}">
             <div class="event-image">
                 <img src="${event.banner_image || "Assets/logo.png"}" alt="placeholder image">
@@ -290,10 +297,10 @@ function renderEvent(event, userRole, view){
 
 document.addEventListener("click", function (e) {
     const card = e.target.closest(".event-card");
-    const isButton = e.target.classList.contains("register-button") || 
-                     e.target.classList.contains("unregister-button") || 
-                     e.target.classList.contains("edit-button")||
-                     e.target.classList.contains("delete-button");
+    const isButton = e.target.classList.contains("register-button") ||
+        e.target.classList.contains("unregister-button") ||
+        e.target.classList.contains("edit-button") ||
+        e.target.classList.contains("delete-button");
 
     if (card && !isButton) {
         const eventId = card.id.replace("event-", "");
@@ -308,15 +315,22 @@ function showEventModal(event) {
     const modal = document.getElementById("eventModal");
 
     const date = event.date.substring(0, 10);
-    const time = event.time.substring(11, 16);
-    // Ensure date and time are in the correct format
+    // Handle time format - could be "HH:MM:SS" or "YYYY-MM-DDTHH:MM:SS"
+    let time;
+    if (event.time.includes('T')) {
+        // Full datetime format
+        time = event.time.substring(11, 16);
+    } else {
+        // Just time format (HH:MM:SS)
+        time = event.time.substring(0, 5);
+    }
 
     const datetime = `${date}T${time}:00`;
     const eventDate = new Date(datetime);
 
-    const formattedDate = eventDate.toLocaleDateString(undefined, {year: 'numeric', month: 'long', day: 'numeric'});
-    const formattedTime = eventDate.toLocaleTimeString(undefined, {hour: '2-digit', minute: '2-digit'});
-    
+    const formattedDate = eventDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const formattedTime = eventDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
     document.getElementById("modalName").textContent = event.name;
     document.getElementById("modalDescription").textContent = event.description || "N/A";
     document.getElementById("modalDate").textContent = formattedDate;
@@ -362,12 +376,12 @@ document.getElementById("addEventForm").addEventListener("submit", async functio
     const weekly = form.weekly.checked
     const org_id = user.id
     const imageFile = form.image.files[0];
-//form inputs
+    //form inputs
     let banner_image = "";
     if (imageFile) {
         const imageFormData = new FormData();
         imageFormData.append("file", imageFile);
-        imageFormData.append("upload_preset", "bed-eventpics"); 
+        imageFormData.append("upload_preset", "bed-eventpics");
         imageFormData.append("cloud_name", "dixpuc6o7");
 
         try { //post image to cloudinary first
@@ -388,7 +402,7 @@ document.getElementById("addEventForm").addEventListener("submit", async functio
             return;
         }
     }
-//upload event data to the database
+    //upload event data to the database
     const formData = {
         name: name,
         description: description,
@@ -443,7 +457,7 @@ document.addEventListener("click", function (e) {
         const eventId = editBtn.dataset.eventId;
         const event = window.allEvents?.find(ev => ev.id == eventId);
         if (event) {
-            editingEvent = event; 
+            editingEvent = event;
             openEditEventModal(event);
         } else {
             console.warn("Event not found for ID:", eventId);
@@ -456,14 +470,19 @@ function openEditEventModal(event) {
     editEventForm.name.value = event.name;
     editEventForm.description.value = event.description;
     //show only event details besides the banner image
-     if (event.date) {
+    if (event.date) {
         const date = new Date(event.date);
         editEventForm.date.value = date.toISOString().split("T")[0];
     }
 
     if (event.time) {
-        editEventForm.time.value = event.time.substring(11,16);
-    } 
+        // Handle time format - could be "HH:MM:SS" or "YYYY-MM-DDTHH:MM:SS"
+        if (event.time.includes('T')) {
+            editEventForm.time.value = event.time.substring(11, 16);
+        } else {
+            editEventForm.time.value = event.time.substring(0, 5);
+        }
+    }
 
     editEventForm.location.value = event.location;
     editEventForm.weekly.checked = !!event.weekly;
@@ -489,7 +508,7 @@ editEventForm.addEventListener("submit", async function (e) {
     const imageFile = imageInput && imageInput.files && imageInput.files[0];
 
     let banner_image = editingEvent?.banner_image || "";
-// If no new image is uploaded, keep the old image URL
+    // If no new image is uploaded, keep the old image URL
     if (imageFile) {
         // If user uploads a new image, upload to Cloudinary and use new URL
         const imageFormData = new FormData();
@@ -569,7 +588,7 @@ document.getElementById("EventsContainer").addEventListener("click", async funct
         if (!confirm("Are you sure you want to delete this event?")) {
             return;
         }
-// Send a DELETE request to the server to delete the event
+        // Send a DELETE request to the server to delete the event
         try {
             const response = await fetch(`/deleteEvent/${eventId}`, {
                 method: "DELETE",
@@ -611,7 +630,7 @@ function showMessagePopover(message, timeout = 3000) {
 }
 
 
-document.getElementById('closePopover').onclick = function() {
+document.getElementById('closePopover').onclick = function () {
     document.getElementById('messagePopover').classList.add('hidden');
 };
 

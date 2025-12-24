@@ -1,4 +1,4 @@
-const sql = require("mssql");
+
 const dbConfig = require("../dbConfig");
 
 const account = require("../Models/accountModel.js");
@@ -22,16 +22,16 @@ function init(dependencies) {
 
 
 async function run() {
-    try {
-        await schedule80FinanceNotifications();
-        await scheduleEventNotifications();
-        await scheduleWeeklyNotifications();
-        await scheduleMedicationNotifications();
-        await scheduleTaskNotifications();
-    } catch (error) {
+  try {
+    await schedule80FinanceNotifications();
+    await scheduleEventNotifications();
+    await scheduleWeeklyNotifications();
+    await scheduleMedicationNotifications();
+    await scheduleTaskNotifications();
+  } catch (error) {
     //console.error("Error scheduling notifications:", error);
-    }
-    //console.log("Notifications scheduled successfully.");
+  }
+  //console.log("Notifications scheduled successfully.");
 }
 
 
@@ -49,7 +49,7 @@ async function scheduleMedicationNotifications() {
       if (!medications || medications.length === 0) continue;
 
       for (const medication of medications) {
-        const { name, time, frequency, dosage} = medication;
+        const { name, time, frequency, dosage } = medication;
         if (!time) continue;
 
         // Parse stored time string (e.g. "1970-01-01T09:00:00.000Z")
@@ -78,12 +78,12 @@ async function scheduleMedicationNotifications() {
 
           if (payload) {
             console.log(`Scheduling notification for user ${id}:`, payload.description);
-              console.log(medication.med_id)
-              const alreadyNotified = await notifications.hasSentMedicationNotificationToday(medication.med_id);
-              console.log("Already notified:", alreadyNotified);
-              if (alreadyNotified) {
-                continue;
-              }
+            console.log(medication.med_id)
+            const alreadyNotified = await notifications.hasSentMedicationNotificationToday(medication.med_id);
+            console.log("Already notified:", alreadyNotified);
+            if (alreadyNotified) {
+              continue;
+            }
             payload.asso_id = medication.med_id; // Associate with medication ID
             const noti_id = await notifications.createNotification(payload);
             payload.noti_id = noti_id;
@@ -155,8 +155,8 @@ async function scheduleWeeklyNotifications() {
 
 
 async function schedule80FinanceNotifications() {
-    try {
-          const now = new Date();
+  try {
+    const now = new Date();
     const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     const users = await finance.getAllUserBudget(monthStr);
@@ -177,10 +177,10 @@ async function schedule80FinanceNotifications() {
         const message = `You've used 80% of your monthly budget. Monitor your spending!`;
 
         let payload = {
-            type: 'finance',
-            acc_id: acc_id,
-            description: message,
-            time: new Date(),
+          type: 'finance',
+          acc_id: acc_id,
+          description: message,
+          time: new Date(),
         }
 
 
@@ -199,8 +199,8 @@ async function schedule80FinanceNotifications() {
 }
 
 async function schedule80FinanceNotifications() {
-    try {
-          const now = new Date();
+  try {
+    const now = new Date();
     const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     const users = await finance.getAllUserBudget(monthStr);
@@ -221,10 +221,10 @@ async function schedule80FinanceNotifications() {
         const message = `You've used ${percentage}% of your monthly budget. Monitor your spending!`;
 
         let payload = {
-            type: 'finance',
-            acc_id: acc_id,
-            description: message,
-            time: new Date(),
+          type: 'finance',
+          acc_id: acc_id,
+          description: message,
+          time: new Date(),
         }
 
 
