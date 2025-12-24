@@ -70,6 +70,10 @@ const {
 /////////////API Endpoints//////////////////////////
 ////////////////////////////////////////////////////
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ ok: true, time: new Date().toISOString() });
+});
+
 //Account Profile Endpoints (By XinHui)
 app.post("/authenticateUser", accountController.authenticateAccount);
 app.get("/getAccountById", authorization.verifyJWT, accountController.getAccountById);
