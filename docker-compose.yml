@@ -14,23 +14,14 @@ services:
 
   sql-init:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sql_server_init
     depends_on:
       - sql-server
     environment:
       MSSQL_SA_PASSWORD: "BedAsgm1!"
     volumes:
       - ./BED_ASGM1_SQLSCRIPT.sql:/init.sql:ro
-    entrypoint: [ "/bin/bash", "-lc" ]
-    command: |
-      echo "Waiting for SQL Server to accept connections..." ;
-      for i in {1..60}; do
-        /opt/mssql-tools18/bin/sqlcmd -S sql-server -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" && break
-        sleep 2
-      done
-      echo "Running init script..." ;
-      /opt/mssql-tools18/bin/sqlcmd -b -S sql-server -U sa -P "$MSSQL_SA_PASSWORD" -C -i /init.sql
-      echo "Init script finished."
+      - ./sql-init.sh:/sql-init.sh:ro
+    entrypoint: [ "/bin/bash", "/sql-init.sh" ]
     restart: "no"
 
 volumes:

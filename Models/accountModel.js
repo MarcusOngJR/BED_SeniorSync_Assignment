@@ -84,14 +84,8 @@ async function initializeAccountDetails(accountId, details) {
     request.input("preferred_language", sql.VarChar, details.preferred_language);
 
     const result = await request.query(`
-     UPDATE AccountProfile
-      SET 
-        name = COALESCE(@name, name),
-        email = COALESCE(@email, email),
-        gender = COALESCE(@gender, gender),
-        date_of_birth = COALESCE(@date_of_birth, date_of_birth),
-        preferred_language = COALESCE(@preferred_language, preferred_language)
-      WHERE id = @id
+      INSERT INTO AccountProfile (id, name, account_type, email, gender, date_of_birth, preferred_language)
+      VALUES (@id, @name, @account_type, @email, @gender, @date_of_birth, @preferred_language)
     `);
 
     return result.rowsAffected[0] > 0; // ensure boolean return
