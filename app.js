@@ -34,7 +34,7 @@ notificationEngine.init({
 
 // Initialize event scheduler for automatic event generation
 const eventScheduler = require("./Services/eventScheduler.js");
-eventScheduler.start(); // Creates random events every 5 hours
+// eventScheduler.start(); // Creates random events every 5 hours
 
 
 const accountController = require("./Controllers/accountController.js");
@@ -252,7 +252,7 @@ server.listen(port, () => {
 // Graceful shutdown
 process.on("SIGINT", async () => {
   console.log("Server is gracefully shutting down");
-  eventScheduler.stop(); // Stop event scheduler
+  // eventScheduler.stop(); // Stop event scheduler
   await closePool(); // Close the database connection pool
   console.log("Database connections closed");
   process.exit(0);
@@ -274,9 +274,9 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 
 /////////////Exports Websocket io for controller use /////////////////////////////
-setInterval(() => {
-  notificationEngine.run().catch(err => console.error("notificationEngine.run() error:", err));
-}, 5000);
+// setInterval(() => {
+//   notificationEngine.run().catch(err => console.error("notificationEngine.run() error:", err));
+// }, 5000);
 
 
 
